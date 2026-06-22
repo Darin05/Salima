@@ -9,17 +9,19 @@ export async function createEmployee(formData: {
   password: string
   org_id: string
 }) {
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return { error: 'Server config missing: SUPABASE_SERVICE_ROLE_KEY not set in Vercel' }
+  }
+
   const admin = createAdminClient()
 
-  // Create auth user
   const { data: authUser, error: authError } = await admin.auth.admin.createUser({
     email: formData.email,
     password: formData.password,
     email_confirm: true,
   })
-  if (authError) return { error: authError.message }
+  if (authError) return { error: `Auth error: ${authError.message}` }
 
-  // Create profile
   const { error: profileError } = await admin.from('profiles').insert({
     id: authUser.user.id,
     org_id: formData.org_id,
@@ -29,7 +31,7 @@ export async function createEmployee(formData: {
     role: 'employee',
     is_active: true,
   })
-  if (profileError) return { error: profileError.message }
+  if (profileError) return { error: `Profile error: ${profileError.message}` }
 
   revalidatePath('/employees')
   return { success: true }
