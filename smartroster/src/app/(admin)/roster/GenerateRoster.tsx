@@ -1,7 +1,7 @@
 'use client'
 import { useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
+import { generateRoster } from './actions'
 
 function getMonday(d: Date) {
   const day = d.getDay(), diff = d.getDate() - day + (day === 0 ? -6 : 1)
@@ -12,47 +12,18 @@ export default function GenerateRoster({ orgId }: { orgId: string }) {
   const [open, setOpen] = useState(false)
   const [weekStart, setWeekStart] = useState(getMonday(new Date()))
   const [generating, setGenerating] = useState(false)
+  const [error, setError] = useState('')
   const router = useRouter()
-  const supabase = createClient()
 
   async function generate(e: React.FormEvent) {
     e.preventDefault()
     setGenerating(true)
-
-    // Create roster draft
-    const { data: roster } = await supabase
-      .from('rosters')
-      .insert({ org_id: orgId, week_start: weekStart, status: 'draft' })
-      .select().single()
-
-    if (!roster) { setGenerating(false); return }
-
-    // Fetch employees + their assigned shift (first shift as default)
-    const { data: employees } = await supabase
-      .from('profiles')
-      .select('id, team_id')
-      .eq('org_id', orgId)
-      .eq('is_active', true)
-      .eq('role', 'employee')
-
-    const { data: shifts } = await supabase.from('shifts').select('id').eq('org_id', orgId).limit(1)
-    const defaultShift = shifts?.[0]?.id
-
-    if (employees?.length && defaultShift) {
-      // Generate 5 working days Mon–Fri per employee
-      const entries = employees.flatMap(emp =>
-        [0, 1, 2, 3, 4].map(offset => {
-          const d = new Date(weekStart)
-          d.setDate(d.getDate() + offset)
-          return { roster_id: roster.id, employee_id: emp.id, shift_id: defaultShift, date: d.toISOString().split('T')[0] }
-        })
-      )
-      await supabase.from('roster_entries').insert(entries)
-    }
-
+    setError('')
+    const result = await generateRoster(orgId, weekStart)
     setGenerating(false)
+    if (result.error) { setError(result.error); return }
     setOpen(false)
-    router.push(`/roster/${roster.id}`)
+    router.push(`/roster/${result.rosterId}`)
   }
 
   return (
@@ -71,6 +42,7 @@ export default function GenerateRoster({ orgId }: { orgId: string }) {
                 <input type="date" value={weekStart} onChange={e => setWeekStart(e.target.value)}
                   className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
               </div>
+              {error && <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">{error}</p>}
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={() => setOpen(false)} className="flex-1 px-4 py-2 text-sm rounded-lg border border-slate-200 hover:bg-slate-50">Cancel</button>
                 <button type="submit" disabled={generating} className="flex-1 px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-60">
