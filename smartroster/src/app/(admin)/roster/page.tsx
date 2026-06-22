@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import PageHeader from '@/components/ui/PageHeader'
 import Badge from '@/components/ui/Badge'
 import RosterActions from './RosterActions'
@@ -8,8 +9,9 @@ import Link from 'next/link'
 export default async function RosterPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  const { data: profile } = await supabase.from('profiles').select('org_id').eq('id', user!.id).single()
-  const { data: rosters } = await supabase
+  const admin = createAdminClient()
+  const { data: profile } = await admin.from('profiles').select('org_id').eq('id', user!.id).single()
+  const { data: rosters } = await admin
     .from('rosters').select('*').eq('org_id', profile!.org_id).order('week_start', { ascending: false })
 
   return (

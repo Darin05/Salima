@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import PageHeader from '@/components/ui/PageHeader'
 import WorkPatternForm from './WorkPatternForm'
 
@@ -11,8 +12,9 @@ const offTypeLabel: Record<string, string> = {
 export default async function WorkPatternsPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  const { data: profile } = await supabase.from('profiles').select('org_id').eq('id', user!.id).single()
-  const { data: patterns } = await supabase.from('work_patterns').select('*').eq('org_id', profile!.org_id)
+  const admin = createAdminClient()
+  const { data: profile } = await admin.from('profiles').select('org_id').eq('id', user!.id).single()
+  const { data: patterns } = await admin.from('work_patterns').select('*').eq('org_id', profile!.org_id)
 
   return (
     <div>

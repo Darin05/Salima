@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import PageHeader from '@/components/ui/PageHeader'
 import Badge from '@/components/ui/Badge'
 import LeaveActions from './LeaveActions'
@@ -6,8 +7,9 @@ import LeaveActions from './LeaveActions'
 export default async function LeavePage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  const { data: profile } = await supabase.from('profiles').select('org_id').eq('id', user!.id).single()
-  const { data: requests } = await supabase
+  const admin = createAdminClient()
+  const { data: profile } = await admin.from('profiles').select('org_id').eq('id', user!.id).single()
+  const { data: requests } = await admin
     .from('leave_requests')
     .select('*, profiles(name, email)')
     .eq('org_id', profile!.org_id)

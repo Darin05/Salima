@@ -1,12 +1,14 @@
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import PageHeader from '@/components/ui/PageHeader'
 import BreakForm from './BreakForm'
 
 export default async function BreaksPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  const { data: profile } = await supabase.from('profiles').select('org_id').eq('id', user!.id).single()
-  const { data: breaks } = await supabase.from('break_rules').select('*').eq('org_id', profile!.org_id).order('break_time')
+  const admin = createAdminClient()
+  const { data: profile } = await admin.from('profiles').select('org_id').eq('id', user!.id).single()
+  const { data: breaks } = await admin.from('break_rules').select('*').eq('org_id', profile!.org_id).order('break_time')
 
   return (
     <div>

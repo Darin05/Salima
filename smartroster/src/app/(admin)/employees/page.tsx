@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import PageHeader from '@/components/ui/PageHeader'
 import Badge from '@/components/ui/Badge'
 import EmployeeActions from './EmployeeActions'
@@ -8,10 +9,11 @@ export default async function EmployeesPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
-  const { data: profile } = await supabase.from('profiles').select('org_id').eq('id', user.id).single()
+  const admin = createAdminClient()
+  const { data: profile } = await admin.from('profiles').select('org_id').eq('id', user.id).single()
   if (!profile) return null
 
-  const { data: employees } = await supabase
+  const { data: employees } = await admin
     .from('profiles')
     .select('id, name, email, employee_number, is_active, teams(name)')
     .eq('org_id', profile.org_id)
@@ -41,9 +43,7 @@ export default async function EmployeesPage() {
                 </td>
                 <td className="px-5 py-4 text-slate-500">{emp.employee_number ?? '—'}</td>
                 <td className="px-5 py-4 text-slate-500">{(emp.teams as any)?.name ?? '—'}</td>
-                <td className="px-5 py-4">
-                  <Badge status={emp.is_active ? 'active' : 'inactive'} />
-                </td>
+                <td className="px-5 py-4"><Badge status={emp.is_active ? 'active' : 'inactive'} /></td>
                 <td className="px-5 py-4 text-right">
                   <EmployeeActions id={emp.id} isActive={emp.is_active} />
                 </td>

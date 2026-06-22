@@ -1,12 +1,14 @@
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import PageHeader from '@/components/ui/PageHeader'
 import TeamForm from './TeamForm'
 
 export default async function TeamsPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  const { data: profile } = await supabase.from('profiles').select('org_id').eq('id', user!.id).single()
-  const { data: teams } = await supabase
+  const admin = createAdminClient()
+  const { data: profile } = await admin.from('profiles').select('org_id').eq('id', user!.id).single()
+  const { data: teams } = await admin
     .from('teams').select('id, name, profiles(count)').eq('org_id', profile!.org_id).order('name')
 
   return (

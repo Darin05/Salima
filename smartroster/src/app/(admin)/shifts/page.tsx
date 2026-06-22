@@ -1,12 +1,14 @@
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import PageHeader from '@/components/ui/PageHeader'
 import ShiftForm from './ShiftForm'
 
 export default async function ShiftsPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  const { data: profile } = await supabase.from('profiles').select('org_id').eq('id', user!.id).single()
-  const { data: shifts } = await supabase.from('shifts').select('*').eq('org_id', profile!.org_id).order('name')
+  const admin = createAdminClient()
+  const { data: profile } = await admin.from('profiles').select('org_id').eq('id', user!.id).single()
+  const { data: shifts } = await admin.from('shifts').select('*').eq('org_id', profile!.org_id).order('name')
 
   return (
     <div>

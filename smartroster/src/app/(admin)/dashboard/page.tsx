@@ -1,21 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import PageHeader from '@/components/ui/PageHeader'
-
-async function getKPIs(orgId: string) {
-  const supabase = await createClient()
-  const [employees, shifts, leave, rosters] = await Promise.all([
-    supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('org_id', orgId).eq('is_active', true),
-    supabase.from('shifts').select('id', { count: 'exact', head: true }).eq('org_id', orgId),
-    supabase.from('leave_requests').select('id', { count: 'exact', head: true }).eq('org_id', orgId).eq('status', 'pending'),
-    supabase.from('rosters').select('id', { count: 'exact', head: true }).eq('org_id', orgId).eq('status', 'published'),
-  ])
-  return {
-    employees: employees.count ?? 0,
-    shifts: shifts.count ?? 0,
-    pendingLeave: leave.count ?? 0,
-    publishedRosters: rosters.count ?? 0,
-  }
-}
 
 const kpiCards = [
   { key: 'employees', label: 'Active Employees', icon: '👥', color: 'bg-indigo-50 text-indigo-600' },
@@ -28,14 +13,29 @@ export default async function DashboardPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
-  const { data: profile } = await supabase.from('profiles').select('org_id, name').eq('id', user.id).single()
+
+  const admin = createAdminClient()
+  const { data: profile } = await admin.from('profiles').select('org_id, name').eq('id', user.id).single()
   if (!profile) return null
-  const kpis = await getKPIs(profile.org_id)
+
+  const [employees, shifts, leave, rosters] = await Promise.all([
+    admin.from('profiles').select('id', { count: 'exact', head: true }).eq('org_id', profile.org_id).eq('is_active', true).eq('role', 'employee'),
+    admin.from('shifts').select('id', { count: 'exact', head: true }).eq('org_id', profile.org_id),
+    admin.from('leave_requests').select('id', { count: 'exact', head: true }).eq('org_id', profile.org_id).eq('status', 'pending'),
+    admin.from('rosters').select('id', { count: 'exact', head: true }).eq('org_id', profile.org_id).eq('status', 'published'),
+  ])
+
+  const kpis = {
+    employees: employees.count ?? 0,
+    shifts: shifts.count ?? 0,
+    pendingLeave: leave.count ?? 0,
+    publishedRosters: rosters.count ?? 0,
+  }
 
   return (
     <div>
       <PageHeader
-        title={`Good morning 👋`}
+        title="Good morning 👋"
         subtitle="Here's what's happening with your team today."
       />
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
