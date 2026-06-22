@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import PageHeader from '@/components/ui/PageHeader'
 import ShiftForm from './ShiftForm'
+import ShiftCard from './ShiftCard'
 
 export default async function ShiftsPage() {
   const supabase = await createClient()
@@ -15,13 +16,7 @@ export default async function ShiftsPage() {
       <PageHeader title="Shifts" subtitle="Define your shift types" action={<ShiftForm orgId={profile!.org_id} />} />
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {shifts?.map(shift => (
-          <div key={shift.id} className="bg-white rounded-2xl border border-slate-200 p-5 flex items-center gap-4">
-            <div className="w-3 h-12 rounded-full flex-shrink-0" style={{ backgroundColor: shift.color }} />
-            <div>
-              <div className="font-semibold text-slate-900">{shift.name}</div>
-              <div className="text-sm text-slate-500 mt-0.5">{shift.start_time} – {shift.end_time}</div>
-            </div>
-          </div>
+          <ShiftCard key={shift.id} id={shift.id} name={shift.name} start_time={shift.start_time} end_time={shift.end_time} color={shift.color} />
         ))}
         {!shifts?.length && (
           <div className="col-span-3 text-center py-16 text-slate-400 bg-white rounded-2xl border border-slate-200">

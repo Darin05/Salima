@@ -37,6 +37,14 @@ export async function createEmployee(formData: {
   return { success: true }
 }
 
+export async function updateEmployee(id: string, data: { name: string; team_id: string | null; shift_id: string | null }) {
+  const admin = createAdminClient()
+  const { error } = await admin.from('profiles').update(data).eq('id', id)
+  if (error) return { error: error.message }
+  revalidatePath('/employees')
+  return { success: true }
+}
+
 export async function toggleEmployee(id: string, isActive: boolean) {
   const admin = createAdminClient()
   const { error } = await admin.from('profiles').update({ is_active: !isActive }).eq('id', id)

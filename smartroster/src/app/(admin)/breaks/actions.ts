@@ -9,3 +9,11 @@ export async function createBreak(data: { name: string; break_time: string; max_
   revalidatePath('/breaks')
   return { success: true }
 }
+
+export async function deleteBreak(id: string) {
+  const admin = createAdminClient()
+  const { error } = await admin.from('break_rules').delete().eq('id', id)
+  if (error) return { error: error.message }
+  revalidatePath('/breaks')
+  return { success: true }
+}

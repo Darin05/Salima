@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import PageHeader from '@/components/ui/PageHeader'
 import TeamForm from './TeamForm'
+import TeamCard from './TeamCard'
 
 export default async function TeamsPage() {
   const supabase = await createClient()
@@ -16,10 +17,7 @@ export default async function TeamsPage() {
       <PageHeader title="Teams" subtitle="Organize employees into teams" action={<TeamForm orgId={profile!.org_id} />} />
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {teams?.map((team: any) => (
-          <div key={team.id} className="bg-white rounded-2xl border border-slate-200 p-6">
-            <div className="font-semibold text-slate-900 text-lg">{team.name}</div>
-            <div className="text-sm text-slate-500 mt-1">{team.profiles?.[0]?.count ?? 0} employees</div>
-          </div>
+          <TeamCard key={team.id} id={team.id} name={team.name} count={team.profiles?.[0]?.count ?? 0} />
         ))}
         {!teams?.length && (
           <div className="col-span-3 text-center py-16 text-slate-400 bg-white rounded-2xl border border-slate-200">

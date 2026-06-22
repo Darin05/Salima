@@ -9,3 +9,11 @@ export async function createWorkPattern(data: { name: string; working_days: numb
   revalidatePath('/work-patterns')
   return { success: true }
 }
+
+export async function deleteWorkPattern(id: string) {
+  const admin = createAdminClient()
+  const { error } = await admin.from('work_patterns').delete().eq('id', id)
+  if (error) return { error: error.message }
+  revalidatePath('/work-patterns')
+  return { success: true }
+}

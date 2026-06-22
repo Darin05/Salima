@@ -1,16 +1,15 @@
 'use client'
-import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
+import { publishRoster } from '../actions'
 
 export default function PublishButton({ id }: { id: string }) {
   const [loading, setLoading] = useState(false)
-  const supabase = createClient()
   const router = useRouter()
 
   async function publish() {
     setLoading(true)
-    await supabase.from('rosters').update({ status: 'published' }).eq('id', id)
+    await publishRoster(id)
     router.refresh()
   }
 

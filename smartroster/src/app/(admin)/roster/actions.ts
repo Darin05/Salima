@@ -11,20 +11,22 @@ export async function generateRoster(orgId: string, weekStart: string) {
   if (error || !roster) return { error: error?.message ?? 'Failed to create roster' }
 
   const [{ data: employees }, { data: shifts }] = await Promise.all([
-    admin.from('profiles').select('id').eq('org_id', orgId).eq('is_active', true).eq('role', 'employee'),
+    admin.from('profiles').select('id, shift_id').eq('org_id', orgId).eq('is_active', true).eq('role', 'employee'),
     admin.from('shifts').select('id').eq('org_id', orgId).limit(1),
   ])
-  const defaultShift = shifts?.[0]?.id
+  const fallbackShift = shifts?.[0]?.id
 
-  if (employees?.length && defaultShift) {
-    const entries = employees.flatMap(emp =>
-      [0, 1, 2, 3, 4].map(offset => {
+  if (employees?.length) {
+    const entries = employees.flatMap((emp: any) => {
+      const shiftId = emp.shift_id ?? fallbackShift
+      if (!shiftId) return []
+      return [0, 1, 2, 3, 4].map(offset => {
         const d = new Date(weekStart)
         d.setDate(d.getDate() + offset)
-        return { roster_id: roster.id, employee_id: emp.id, shift_id: defaultShift, date: d.toISOString().split('T')[0] }
+        return { roster_id: roster.id, employee_id: emp.id, shift_id: shiftId, date: d.toISOString().split('T')[0] }
       })
-    )
-    await admin.from('roster_entries').insert(entries)
+    })
+    if (entries.length) await admin.from('roster_entries').insert(entries)
   }
 
   revalidatePath('/roster')

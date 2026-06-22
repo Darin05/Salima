@@ -1,3 +1,4 @@
+import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import Badge from '@/components/ui/Badge'
 import Link from 'next/link'
@@ -6,8 +7,12 @@ import PublishButton from './PublishButton'
 export default async function RosterDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const supabase = await createClient()
-  const { data: roster } = await supabase.from('rosters').select('*').eq('id', id).single()
-  const { data: entries } = await supabase
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return null
+
+  const admin = createAdminClient()
+  const { data: roster } = await admin.from('rosters').select('*').eq('id', id).single()
+  const { data: entries } = await admin
     .from('roster_entries')
     .select('*, profiles(name), shifts(name, start_time, end_time, color)')
     .eq('roster_id', id)
@@ -15,7 +20,6 @@ export default async function RosterDetailPage({ params }: { params: Promise<{ i
 
   if (!roster) return <div className="p-8 text-slate-500">Roster not found.</div>
 
-  // Group entries by employee
   const byEmployee: Record<string, { name: string; entries: any[] }> = {}
   for (const entry of entries ?? []) {
     const name = (entry.profiles as any)?.name ?? 'Unknown'
@@ -23,7 +27,6 @@ export default async function RosterDetailPage({ params }: { params: Promise<{ i
     byEmployee[entry.employee_id].entries.push(entry)
   }
 
-  // Get unique dates for column headers
   const dates = [...new Set((entries ?? []).map(e => e.date))].sort()
 
   return (
@@ -39,7 +42,6 @@ export default async function RosterDetailPage({ params }: { params: Promise<{ i
         </div>
       </div>
 
-      {/* Roster Grid */}
       <div className="bg-white rounded-2xl border border-slate-200 overflow-x-auto">
         <table className="w-full text-sm min-w-[600px]">
           <thead>

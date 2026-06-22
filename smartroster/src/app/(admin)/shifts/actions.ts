@@ -9,3 +9,11 @@ export async function createShift(data: { name: string; start_time: string; end_
   revalidatePath('/shifts')
   return { success: true }
 }
+
+export async function deleteShift(id: string) {
+  const admin = createAdminClient()
+  const { error } = await admin.from('shifts').delete().eq('id', id)
+  if (error) return { error: error.message }
+  revalidatePath('/shifts')
+  return { success: true }
+}
