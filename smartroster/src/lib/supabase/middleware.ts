@@ -31,7 +31,13 @@ export async function updateSession(request: NextRequest) {
   }
 
   if (user && isAuthPage) {
-    const { data: profile } = await supabase
+    // ponytail: using service role key for profile lookup — ceiling: single user read. upgrade: when we add JWT claims.
+    const serviceSupabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      { cookies: { getAll: () => [], setAll: () => {} } }
+    )
+    const { data: profile } = await serviceSupabase
       .from('profiles')
       .select('role')
       .eq('id', user.id)
