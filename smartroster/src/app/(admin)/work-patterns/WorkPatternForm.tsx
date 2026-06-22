@@ -1,7 +1,7 @@
 'use client'
 import { useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
+import { createWorkPattern } from './actions'
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
@@ -9,8 +9,8 @@ export default function WorkPatternForm({ orgId }: { orgId: string }) {
   const [open, setOpen] = useState(false)
   const [form, setForm] = useState({ name: '', working_days: 5, off_type: 'fixed', off_days: ['Friday', 'Saturday'] })
   const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
   const router = useRouter()
-  const supabase = createClient()
 
   function toggleDay(day: string) {
     setForm(f => ({
@@ -22,9 +22,12 @@ export default function WorkPatternForm({ orgId }: { orgId: string }) {
   async function save(e: React.FormEvent) {
     e.preventDefault()
     setSaving(true)
-    await supabase.from('work_patterns').insert({ ...form, org_id: orgId })
+    setError('')
+    const result = await createWorkPattern({ ...form, org_id: orgId })
     setSaving(false)
+    if (result.error) { setError(result.error); return }
     setOpen(false)
+    setForm({ name: '', working_days: 5, off_type: 'fixed', off_days: ['Friday', 'Saturday'] })
     router.refresh()
   }
 
@@ -74,8 +77,9 @@ export default function WorkPatternForm({ orgId }: { orgId: string }) {
                   ))}
                 </div>
               </div>
+              {error && <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">{error}</p>}
               <div className="flex gap-3 pt-2">
-                <button type="button" onClick={() => setOpen(false)} className="flex-1 px-4 py-2 text-sm rounded-lg border border-slate-200 hover:bg-slate-50">Cancel</button>
+                <button type="button" onClick={() => { setOpen(false); setError('') }} className="flex-1 px-4 py-2 text-sm rounded-lg border border-slate-200 hover:bg-slate-50">Cancel</button>
                 <button type="submit" disabled={saving} className="flex-1 px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-60">
                   {saving ? 'Saving…' : 'Save Pattern'}
                 </button>

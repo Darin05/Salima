@@ -1,13 +1,12 @@
 'use client'
-import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
+import { updateLeaveStatus } from './actions'
 
 export default function LeaveActions({ id }: { id: string }) {
-  const supabase = createClient()
   const router = useRouter()
 
-  const update = (status: string) => async () => {
-    await supabase.from('leave_requests').update({ status }).eq('id', id)
+  const update = (status: 'approved' | 'rejected') => async () => {
+    await updateLeaveStatus(id, status)
     router.refresh()
   }
 

@@ -1,18 +1,17 @@
 'use client'
-import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
+import { toggleEmployee, deleteEmployee } from './actions'
 
 export default function EmployeeActions({ id, isActive }: { id: string; isActive: boolean }) {
-  const supabase = createClient()
   const router = useRouter()
 
   async function toggle() {
-    await supabase.from('profiles').update({ is_active: !isActive }).eq('id', id)
+    await toggleEmployee(id, isActive)
     router.refresh()
   }
   async function remove() {
     if (!confirm('Delete this employee?')) return
-    await supabase.from('profiles').delete().eq('id', id)
+    await deleteEmployee(id)
     router.refresh()
   }
 

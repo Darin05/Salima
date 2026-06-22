@@ -1,18 +1,17 @@
 'use client'
-import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
+import { publishRoster, deleteRoster } from './actions'
 
 export default function RosterActions({ id, status }: { id: string; status: string }) {
-  const supabase = createClient()
   const router = useRouter()
 
   async function publish() {
-    await supabase.from('rosters').update({ status: 'published' }).eq('id', id)
+    await publishRoster(id)
     router.refresh()
   }
   async function remove() {
     if (!confirm('Delete this roster?')) return
-    await supabase.from('rosters').delete().eq('id', id)
+    await deleteRoster(id)
     router.refresh()
   }
 

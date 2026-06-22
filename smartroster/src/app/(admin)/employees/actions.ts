@@ -36,3 +36,19 @@ export async function createEmployee(formData: {
   revalidatePath('/employees')
   return { success: true }
 }
+
+export async function toggleEmployee(id: string, isActive: boolean) {
+  const admin = createAdminClient()
+  const { error } = await admin.from('profiles').update({ is_active: !isActive }).eq('id', id)
+  if (error) return { error: error.message }
+  revalidatePath('/employees')
+  return { success: true }
+}
+
+export async function deleteEmployee(id: string) {
+  const admin = createAdminClient()
+  await admin.from('profiles').delete().eq('id', id)
+  await admin.auth.admin.deleteUser(id)
+  revalidatePath('/employees')
+  return { success: true }
+}
