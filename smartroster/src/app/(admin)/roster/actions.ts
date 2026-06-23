@@ -53,13 +53,15 @@ export async function generateRoster(orgId: string, weekStart: string, mode: 'we
   const weekEnd = workingDays[workingDays.length - 1]
 
   const [{ data: employees }, { data: shifts }, { data: leaves }, { data: breaks }] = await Promise.all([
-    admin.from('profiles').select('id, shift_id').eq('org_id', orgId).eq('is_active', true).eq('role', 'employee'),
+    admin.from('profiles').select('id, name, shift_id').eq('org_id', orgId).eq('is_active', true).eq('role', 'employee').order('name'),
     admin.from('shifts').select('id').eq('org_id', orgId).limit(1),
     admin.from('leave_requests').select('employee_id, start_date, end_date').eq('org_id', orgId).eq('status', 'approved').lte('start_date', weekEnd).gte('end_date', workingDays[0]),
-    admin.from('break_rules').select('id').eq('org_id', orgId),
+    admin.from('break_rules').select('id, max_concurrent').eq('org_id', orgId),
   ])
   const fallbackShift = shifts?.[0]?.id
   const breakIds = (breaks ?? []).map((b: any) => b.id)
+  // Use the strictest (smallest) max_concurrent across all break rules; default 2
+  const maxConcurrent = Math.min(...(breaks ?? []).map((b: any) => b.max_concurrent ?? 2).filter((n: number) => n > 0)) || 2
 
   const onLeave = new Set<string>()
   for (const leave of leaves ?? []) {
@@ -72,13 +74,32 @@ export async function generateRoster(orgId: string, weekStart: string, mode: 'we
   }
 
   if (employees?.length) {
-    const entries = (employees as any[]).flatMap(emp => {
+    // Group employees by shift so slots are assigned within each shift independently
+    const byShift = new Map<string, any[]>()
+    for (const emp of employees as any[]) {
       const shiftId = emp.shift_id ?? fallbackShift
-      if (!shiftId) return []
-      return workingDays
-        .filter(date => !onLeave.has(`${emp.id}|${date}`))
-        .map(date => ({ roster_id: roster.id, employee_id: emp.id, shift_id: shiftId, date, break_ids: breakIds }))
-    })
+      if (!shiftId) continue
+      if (!byShift.has(shiftId)) byShift.set(shiftId, [])
+      byShift.get(shiftId)!.push(emp)
+    }
+
+    const entries: any[] = []
+    for (const [shiftId, shiftEmps] of byShift) {
+      // Employees already ordered by name; assign break_slot = pair index within this shift
+      shiftEmps.forEach((emp, i) => {
+        const breakSlot = Math.floor(i / maxConcurrent)
+        workingDays
+          .filter(date => !onLeave.has(`${emp.id}|${date}`))
+          .forEach(date => entries.push({
+            roster_id: roster.id,
+            employee_id: emp.id,
+            shift_id: shiftId,
+            date,
+            break_ids: breakIds,
+            break_slot: breakSlot,
+          }))
+      })
+    }
     if (entries.length) await admin.from('roster_entries').insert(entries)
   }
 

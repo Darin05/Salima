@@ -72,7 +72,7 @@ export default async function SchedulePage({
       .eq('id', user.id)
       .single(),
     admin.from('roster_entries')
-      .select('date, shift_id, break_ids, shifts(name, start_time, end_time, color), rosters!inner(status)')
+      .select('date, shift_id, break_ids, break_slot, shifts(name, start_time, end_time, color), rosters!inner(status)')
       .eq('employee_id', user.id)
       .eq('rosters.status', 'published')
       .gte('date', toYMD(rangeStart))
@@ -196,7 +196,7 @@ export default async function SchedulePage({
                         <div className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1.5">Breaks &amp; Lunch</div>
                         <div className="space-y-0.5">
                           {dayBreaks.map(b => (
-                            <div key={b.id} className="text-xs text-slate-600">{b.name}: {computeBreakTime(shift?.start_time ?? '08:00', shift?.end_time ?? '17:00', b.offset_from ?? 'start', b.offset_minutes ?? 120)}</div>
+                            <div key={b.id} className="text-xs text-slate-600">{b.name}: {computeBreakTime(shift?.start_time ?? '08:00', shift?.end_time ?? '17:00', b.offset_from ?? 'start', b.offset_minutes ?? 120, (day.entry?.break_slot ?? 0) * 15)}</div>
                           ))}
                         </div>
                       </div>

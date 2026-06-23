@@ -77,6 +77,21 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const empList = (employees ?? []) as any[]
   const totalEmployees = empList.length
 
+  // Compute staggered break slot per employee (sorted by name within each shift)
+  const maxConcurrent = Math.min(...(breaks ?? []).map((b: any) => b.max_concurrent ?? 2).filter((n: number) => n > 0)) || 2
+  const empBreakSlot = new Map<string, number>()
+  const byShift = new Map<string, any[]>()
+  for (const emp of empList) {
+    const sid = emp.shift_id
+    if (!sid) continue
+    if (!byShift.has(sid)) byShift.set(sid, [])
+    byShift.get(sid)!.push(emp)
+  }
+  for (const group of byShift.values()) {
+    group.sort((a, b) => a.name.localeCompare(b.name))
+    group.forEach((emp, i) => empBreakSlot.set(emp.id, Math.floor(i / maxConcurrent)))
+  }
+
   // Per-day coverage
   const coverage = weekDates.map(date => {
     let working = 0, onLeave = 0, off = 0
@@ -249,7 +264,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                             <div className="text-green-700 text-xs mt-0.5">{shift.name} · {formatTime(shift.start_time)}–{formatTime(shift.end_time)}</div>
                             {(breaks as any[])?.map((b: any, i: number) => (
                               <div key={b.id} className="text-green-600 text-xs mt-0.5">
-                                B{i+1} {computeBreakTime(shift.start_time, shift.end_time, b.offset_from ?? 'start', b.offset_minutes ?? 120)}
+                                B{i+1} {computeBreakTime(shift.start_time, shift.end_time, b.offset_from ?? 'start', b.offset_minutes ?? 120, (empBreakSlot.get(emp.id) ?? 0) * 15)}
                               </div>
                             ))}
                           </div>

@@ -20,7 +20,7 @@ export default async function TodayPage() {
 
   const [{ data: profile }, { data: entry }, { data: leaveToday }] = await Promise.all([
     admin.from('profiles').select('name, org_id, shift_id, shifts(name, start_time, end_time, color)').eq('id', user.id).single(),
-    admin.from('roster_entries').select('*, shifts(name, start_time, end_time, color), break_ids, rosters!inner(status)').eq('employee_id', user.id).eq('date', today).eq('rosters.status', 'published').maybeSingle(),
+    admin.from('roster_entries').select('*, shifts(name, start_time, end_time, color), break_ids, break_slot, rosters!inner(status)').eq('employee_id', user.id).eq('date', today).eq('rosters.status', 'published').maybeSingle(),
     admin.from('leave_requests').select('type').eq('employee_id', user.id).eq('status', 'approved').lte('start_date', today).gte('end_date', today).maybeSingle(),
   ])
 
@@ -76,7 +76,7 @@ export default async function TodayPage() {
                   <div key={b.id} className="flex items-center gap-3">
                     <span className="text-base">☕</span>
                     <div>
-                      <div className="text-sm font-medium text-slate-700">Break {i + 1} — {computeBreakTime(shift.start_time, shift.end_time, b.offset_from ?? 'start', b.offset_minutes ?? 120)}</div>
+                      <div className="text-sm font-medium text-slate-700">Break {i + 1} — {computeBreakTime(shift.start_time, shift.end_time, b.offset_from ?? 'start', b.offset_minutes ?? 120, (entry?.break_slot ?? 0) * 15)}</div>
                       <div className="text-xs text-slate-400">{b.name}</div>
                     </div>
                   </div>
