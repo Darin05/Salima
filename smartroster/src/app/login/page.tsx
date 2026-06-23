@@ -15,8 +15,9 @@ export default function LoginPage() {
     setError('')
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) { setError(error.message); setLoading(false); return }
-    // Hard reload to / so middleware (service role key) handles role-based redirect
-    window.location.href = '/'
+    // Ensure session cookie is written before navigating
+    await supabase.auth.getSession()
+    window.location.replace('/')
   }
 
   return (
