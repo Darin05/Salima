@@ -23,14 +23,16 @@ export async function updateSession(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser()
 
-  const isAuthPage = request.nextUrl.pathname === '/login'
-  const isPublic = isAuthPage || request.nextUrl.pathname === '/'
+  const path = request.nextUrl.pathname
+  const isAuthPage = path === '/login'
+  const isRootPage = path === '/'
+  const isPublic = isAuthPage || isRootPage
 
   if (!user && !isPublic) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
-  if (user && isAuthPage) {
+  if (user && (isAuthPage || isRootPage)) {
     // ponytail: using service role key for profile lookup — ceiling: single user read. upgrade: when we add JWT claims.
     const serviceSupabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
