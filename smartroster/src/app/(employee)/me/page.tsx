@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import LogoutButton from './LogoutButton'
 
 function formatTime(t: string) { return t?.slice(0, 5) ?? '' }
 
@@ -37,13 +38,14 @@ export default async function TodayPage() {
     <div className="space-y-5">
       {/* Header */}
       <div className="flex items-center gap-3 pt-2">
-        <div className="w-11 h-11 rounded-full bg-indigo-600 flex items-center justify-center text-white font-bold text-sm">
+        <div className="w-11 h-11 rounded-full bg-indigo-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
           {initials(profileName)}
         </div>
-        <div>
+        <div className="flex-1">
           <p className="text-xs text-slate-400">{todayLabel}</p>
           <h1 className="text-xl font-bold text-slate-900">Hi, {firstName} 👋</h1>
         </div>
+        <LogoutButton />
       </div>
 
       {/* Today's status */}
