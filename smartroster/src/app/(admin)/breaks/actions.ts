@@ -2,7 +2,7 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 
-export async function createBreak(data: { name: string; break_time: string; max_concurrent: number; org_id: string }) {
+export async function createBreak(data: { name: string; offset_from: string; offset_minutes: number; max_concurrent: number; org_id: string }) {
   const admin = createAdminClient()
   const { error } = await admin.from('break_rules').insert(data)
   if (error) return { error: error.message }
@@ -10,7 +10,7 @@ export async function createBreak(data: { name: string; break_time: string; max_
   return { success: true }
 }
 
-export async function updateBreak(id: string, data: { name: string; break_time: string; max_concurrent: number }) {
+export async function updateBreak(id: string, data: { name: string; offset_from: string; offset_minutes: number; max_concurrent: number }) {
   const admin = createAdminClient()
   const { error } = await admin.from('break_rules').update(data).eq('id', id)
   if (error) return { error: error.message }

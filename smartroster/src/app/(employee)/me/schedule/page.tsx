@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import ScheduleNav from './ScheduleNav'
+import { computeBreakTime } from '@/lib/breakTime'
 
 function fmt(t: string) { return t?.slice(0, 5) ?? '' }
 
@@ -87,7 +88,7 @@ export default async function SchedulePage({
 
   let allBreaks: any[] = []
   if (profile?.org_id) {
-    const { data: br } = await admin.from('break_rules').select('*').eq('org_id', profile.org_id).order('break_time')
+    const { data: br } = await admin.from('break_rules').select('*').eq('org_id', profile.org_id).order('offset_minutes')
     allBreaks = br ?? []
   }
 
@@ -195,7 +196,7 @@ export default async function SchedulePage({
                         <div className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1.5">Breaks &amp; Lunch</div>
                         <div className="space-y-0.5">
                           {dayBreaks.map(b => (
-                            <div key={b.id} className="text-xs text-slate-600">{b.name}: {fmt(b.break_time)}</div>
+                            <div key={b.id} className="text-xs text-slate-600">{b.name}: {computeBreakTime(shift?.start_time ?? '08:00', shift?.end_time ?? '17:00', b.offset_from ?? 'start', b.offset_minutes ?? 120)}</div>
                           ))}
                         </div>
                       </div>

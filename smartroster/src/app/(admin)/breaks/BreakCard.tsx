@@ -3,11 +3,20 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { deleteBreak, updateBreak } from './actions'
 
-export default function BreakCard({ id, name, break_time, max_concurrent }: { id: string; name: string; break_time: string; max_concurrent: number }) {
+function fmtOffset(offset_from: string, offset_minutes: number) {
+  const h = Math.floor(offset_minutes / 60)
+  const m = offset_minutes % 60
+  const label = offset_from === 'end' ? 'before shift end' : 'after shift start'
+  return `${h}h${m > 0 ? ` ${m}m` : ''} ${label}`
+}
+
+export default function BreakCard({ id, name, offset_from, offset_minutes, max_concurrent }: {
+  id: string; name: string; offset_from: string; offset_minutes: number; max_concurrent: number
+}) {
   const [confirming, setConfirming] = useState(false)
   const [editing, setEditing] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [form, setForm] = useState({ name, break_time, max_concurrent })
+  const [form, setForm] = useState({ name, offset_from: offset_from ?? 'start', offset_minutes: offset_minutes ?? 120, max_concurrent })
   const [error, setError] = useState('')
   const router = useRouter()
 
@@ -28,6 +37,9 @@ export default function BreakCard({ id, name, break_time, max_concurrent }: { id
     router.refresh()
   }
 
+  const hrs = Math.floor(form.offset_minutes / 60)
+  const mins = form.offset_minutes % 60
+
   if (editing) {
     return (
       <div className="bg-white rounded-2xl border border-indigo-200 p-6">
@@ -38,9 +50,25 @@ export default function BreakCard({ id, name, break_time, max_concurrent }: { id
               className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
           </div>
           <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">Time</label>
-            <input type="time" value={form.break_time} onChange={e => setForm(f => ({ ...f, break_time: e.target.value }))}
-              className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+            <label className="block text-xs font-medium text-slate-600 mb-1">Offset from</label>
+            <select value={form.offset_from} onChange={e => setForm(f => ({ ...f, offset_from: e.target.value }))}
+              className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+              <option value="start">Shift Start</option>
+              <option value="end">Shift End</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-600 mb-1">Time offset</label>
+            <div className="flex gap-2 items-center">
+              <input type="number" min={0} max={23} value={hrs}
+                onChange={e => setForm(f => ({ ...f, offset_minutes: +e.target.value * 60 + (f.offset_minutes % 60) }))}
+                className="w-16 px-2 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+              <span className="text-xs text-slate-500">hr</span>
+              <input type="number" min={0} max={59} step={5} value={mins}
+                onChange={e => setForm(f => ({ ...f, offset_minutes: Math.floor(f.offset_minutes / 60) * 60 + +e.target.value }))}
+                className="w-16 px-2 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+              <span className="text-xs text-slate-500">min</span>
+            </div>
           </div>
           <div>
             <label className="block text-xs font-medium text-slate-600 mb-1">Max Concurrent</label>
@@ -64,13 +92,11 @@ export default function BreakCard({ id, name, break_time, max_concurrent }: { id
       <div>
         <div className="text-2xl mb-3">☕</div>
         <div className="font-semibold text-slate-900">{name}</div>
-        <div className="text-sm text-slate-500 mt-1">{break_time}</div>
+        <div className="text-sm text-indigo-600 mt-1 font-medium">{fmtOffset(offset_from ?? 'start', offset_minutes ?? 120)}</div>
         <div className="text-xs text-slate-400 mt-1">Max {max_concurrent} at once</div>
       </div>
       <div className="flex flex-col items-end gap-1">
-        <button onClick={() => setEditing(true)} className="text-xs text-indigo-400 hover:text-indigo-600 px-2 py-1 rounded hover:bg-indigo-50 transition">
-          Edit
-        </button>
+        <button onClick={() => setEditing(true)} className="text-xs text-indigo-400 hover:text-indigo-600 px-2 py-1 rounded hover:bg-indigo-50 transition">Edit</button>
         {confirming ? (
           <div className="flex items-center gap-1">
             <span className="text-xs text-slate-500">Sure?</span>
@@ -80,9 +106,7 @@ export default function BreakCard({ id, name, break_time, max_concurrent }: { id
             <button onClick={() => setConfirming(false)} className="text-xs text-slate-500 px-2 py-1 rounded hover:bg-slate-100 transition">No</button>
           </div>
         ) : (
-          <button onClick={() => setConfirming(true)} className="text-xs text-red-400 hover:text-red-600 px-2 py-1 rounded hover:bg-red-50 transition">
-            Delete
-          </button>
+          <button onClick={() => setConfirming(true)} className="text-xs text-red-400 hover:text-red-600 px-2 py-1 rounded hover:bg-red-50 transition">Delete</button>
         )}
       </div>
     </div>

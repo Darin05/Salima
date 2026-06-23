@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import LogoutButton from './LogoutButton'
+import { computeBreakTime } from '@/lib/breakTime'
 
 function formatTime(t: string) { return t?.slice(0, 5) ?? '' }
 
@@ -26,7 +27,7 @@ export default async function TodayPage() {
   // Fetch breaks if on roster
   let breaks: any[] = []
   if (entry?.break_ids?.length && profile?.org_id) {
-    const { data: br } = await admin.from('break_rules').select('*').in('id', entry.break_ids).order('break_time')
+    const { data: br } = await admin.from('break_rules').select('*').in('id', entry.break_ids).order('offset_minutes')
     breaks = br ?? []
   }
 
@@ -75,7 +76,7 @@ export default async function TodayPage() {
                   <div key={b.id} className="flex items-center gap-3">
                     <span className="text-base">☕</span>
                     <div>
-                      <div className="text-sm font-medium text-slate-700">Break {i + 1} — {formatTime(b.break_time)}</div>
+                      <div className="text-sm font-medium text-slate-700">Break {i + 1} — {computeBreakTime(shift.start_time, shift.end_time, b.offset_from ?? 'start', b.offset_minutes ?? 120)}</div>
                       <div className="text-xs text-slate-400">{b.name}</div>
                     </div>
                   </div>

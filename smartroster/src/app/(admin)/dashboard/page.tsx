@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import WeekNav from './WeekNav'
+import { computeBreakTime } from '@/lib/breakTime'
 
 function toMonday(dateStr: string) {
   const d = new Date(dateStr + 'T00:00:00')
@@ -55,7 +56,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   ] = await Promise.all([
     admin.from('profiles').select('id, name, shift_id, team_id, shifts(name, start_time, end_time, color), teams(name)').eq('org_id', orgId).eq('is_active', true).eq('role', 'employee').order('name'),
     admin.from('shifts').select('*').eq('org_id', orgId),
-    admin.from('break_rules').select('*').eq('org_id', orgId).order('break_time'),
+    admin.from('break_rules').select('*').eq('org_id', orgId).order('offset_minutes'),
     admin.from('leave_requests').select('employee_id, start_date, end_date, type, status').eq('org_id', orgId).in('status', ['approved', 'pending']).lte('start_date', sunday).gte('end_date', monday),
     admin.from('leave_requests').select('*', { count: 'exact', head: true }).eq('org_id', orgId).eq('status', 'pending'),
   ])
@@ -247,7 +248,9 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                             <div className="font-semibold text-green-800 uppercase text-xs">WORK</div>
                             <div className="text-green-700 text-xs mt-0.5">{shift.name} · {formatTime(shift.start_time)}–{formatTime(shift.end_time)}</div>
                             {(breaks as any[])?.map((b: any, i: number) => (
-                              <div key={b.id} className="text-green-600 text-xs mt-0.5">B{i+1} {formatTime(b.break_time)}</div>
+                              <div key={b.id} className="text-green-600 text-xs mt-0.5">
+                                B{i+1} {computeBreakTime(shift.start_time, shift.end_time, b.offset_from ?? 'start', b.offset_minutes ?? 120)}
+                              </div>
                             ))}
                           </div>
                         </td>

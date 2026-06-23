@@ -1,45 +1,34 @@
 'use client'
 import { useRouter, usePathname } from 'next/navigation'
 
-function addDays(dateStr: string, days: number) {
-  const d = new Date(dateStr + 'T00:00:00')
-  d.setDate(d.getDate() + days)
-  return d.toISOString().split('T')[0]
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December']
+
+function addDays(d: Date, n: number): Date {
+  const r = new Date(d); r.setDate(r.getDate() + n); return r
 }
 
-function getWeekLabel(monday: string) {
-  const start = new Date(monday + 'T00:00:00')
-  const end = new Date(monday + 'T00:00:00')
-  end.setDate(end.getDate() + 6)
-  const weekNum = Math.ceil((start.getDate() + new Date(start.getFullYear(), start.getMonth(), 1).getDay()) / 7)
-  const fmt = (d: Date) => d.toLocaleDateString('en', { day: 'numeric', month: 'short' })
-  return `Week ${weekNum}  ·  ${fmt(start)} – ${fmt(end)}`
+function toMonday(d: Date): Date {
+  const day = d.getDay()
+  const r = new Date(d)
+  r.setDate(d.getDate() + (day === 0 ? -6 : 1 - day))
+  return r
 }
 
-function getMonthStr(monday: string) {
-  return new Date(monday + 'T00:00:00').toLocaleDateString('en', { month: 'long', year: 'numeric' })
-}
+function toYMD(d: Date): string { return d.toISOString().split('T')[0] }
 
-function getWeeksOfMonth(monday: string) {
-  const d = new Date(monday + 'T00:00:00')
-  const year = d.getFullYear()
-  const month = d.getMonth()
-  const weeks: { label: string; monday: string }[] = []
+function getWeeksOfMonth(year: number, month: number): { label: string; monday: string }[] {
   const first = new Date(year, month, 1)
-  // Find first Monday of or before the 1st
-  let cur = new Date(first)
-  const dow = cur.getDay()
-  cur.setDate(cur.getDate() - (dow === 0 ? 6 : dow - 1))
-  while (true) {
-    const mon = cur.toISOString().split('T')[0]
-    const sun = new Date(cur)
-    sun.setDate(sun.getDate() + 6)
-    // Include week if it overlaps the month
-    if (cur.getMonth() <= month && sun.getMonth() >= month || cur.getFullYear() < year && sun.getMonth() >= month) {
-      weeks.push({ label: getWeekLabel(mon), monday: mon })
-    }
-    cur.setDate(cur.getDate() + 7)
-    if (cur.getFullYear() > year || (cur.getFullYear() === year && cur.getMonth() > month)) break
+  const last = new Date(year, month + 1, 0)
+  const weeks: { label: string; monday: string }[] = []
+  let cur = toMonday(first)
+  let idx = 1
+  while (cur <= last) {
+    const end = addDays(cur, 6)
+    const s = cur.toLocaleDateString('en', { day: 'numeric', month: 'short' })
+    const e = end.toLocaleDateString('en', { day: 'numeric', month: 'short' })
+    weeks.push({ label: `Week ${idx}: ${s} – ${e}`, monday: toYMD(cur) })
+    cur = addDays(cur, 7)
+    idx++
   }
   return weeks
 }
@@ -47,19 +36,42 @@ function getWeeksOfMonth(monday: string) {
 export default function WeekNav({ monday }: { monday: string }) {
   const router = useRouter()
   const pathname = usePathname()
-  const prevWeek = addDays(monday, -7)
-  const nextWeek = addDays(monday, 7)
-  const weeks = getWeeksOfMonth(monday)
+
+  const mondayDate = new Date(monday + 'T00:00:00')
+  const year = mondayDate.getFullYear()
+  const month = mondayDate.getMonth()
+
+  const prevWeek = toYMD(addDays(mondayDate, -7))
+  const nextWeek = toYMD(addDays(mondayDate, 7))
+  const weeks = getWeeksOfMonth(year, month)
+
+  // 6 months back and 6 forward
+  const monthOptions: { value: string; label: string }[] = []
+  for (let i = -6; i <= 6; i++) {
+    const d = new Date(year, month + i, 1)
+    const val = `${d.getFullYear()}-${d.getMonth()}`
+    monthOptions.push({ value: val, label: `${MONTHS[d.getMonth()]} ${d.getFullYear()}` })
+  }
 
   function go(w: string) { router.push(`${pathname}?week=${w}`) }
+
+  function changeMonth(val: string) {
+    const [y, m] = val.split('-').map(Number)
+    const ws = getWeeksOfMonth(y, m)
+    if (ws.length > 0) go(ws[0].monday)
+  }
 
   return (
     <div className="flex items-center gap-3 flex-wrap">
       <div>
         <div className="text-xs text-slate-400 mb-1">Month</div>
-        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700">
-          {getMonthStr(monday)}
-        </div>
+        <select
+          value={`${year}-${month}`}
+          onChange={e => changeMonth(e.target.value)}
+          className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        >
+          {monthOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+        </select>
       </div>
       <div>
         <div className="text-xs text-slate-400 mb-1">Week</div>
@@ -68,16 +80,14 @@ export default function WeekNav({ monday }: { monday: string }) {
           onChange={e => go(e.target.value)}
           className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
         >
-          {weeks.map(w => (
-            <option key={w.monday} value={w.monday}>{w.label}</option>
-          ))}
+          {weeks.map(w => <option key={w.monday} value={w.monday}>{w.label}</option>)}
         </select>
       </div>
       <div className="flex items-center gap-2 mt-4">
-        <button onClick={() => go(prevWeek)} className="px-3 py-1.5 text-sm border border-slate-200 rounded-lg hover:bg-slate-50 text-slate-600">
+        <button onClick={() => go(prevWeek)} className="px-3 py-1.5 text-sm border border-slate-200 rounded-lg hover:bg-slate-50 bg-white text-slate-600 transition">
           ← Previous week
         </button>
-        <button onClick={() => go(nextWeek)} className="px-3 py-1.5 text-sm border border-slate-200 rounded-lg hover:bg-slate-50 text-slate-600">
+        <button onClick={() => go(nextWeek)} className="px-3 py-1.5 text-sm border border-slate-200 rounded-lg hover:bg-slate-50 bg-white text-slate-600 transition">
           Next week →
         </button>
       </div>
