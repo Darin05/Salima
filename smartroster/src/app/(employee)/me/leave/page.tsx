@@ -39,7 +39,7 @@ export default async function MyLeavePage() {
     <div className="space-y-5">
       <div className="flex items-center justify-between pt-2">
         <h1 className="text-xl font-bold text-slate-900">My Leave</h1>
-        <LeaveRequestForm employeeId={user.id} orgId={profile!.org_id} />
+        {profile?.org_id && <LeaveRequestForm employeeId={user.id} orgId={profile.org_id} />}
       </div>
 
       {/* Summary */}
