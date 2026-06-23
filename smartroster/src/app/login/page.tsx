@@ -17,8 +17,8 @@ export default function LoginPage() {
     setError('')
     const { data, error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) { setError(error.message); setLoading(false); return }
-    const { data: profile } = await supabase.from('profiles').select('role').eq('id', data.user.id).single()
-    router.push(profile?.role === 'admin' ? '/dashboard' : '/me')
+    // Use the middleware redirect by navigating to /login — it will check role server-side
+    router.push('/login')
   }
 
   return (
