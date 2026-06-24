@@ -3,7 +3,12 @@ import { useRouter, usePathname } from 'next/navigation'
 
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December']
 
-function addDays(d: Date, n: number): Date {
+// Use local date parts — avoids UTC/timezone drift from toISOString()
+function toYMD(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+function addDaysTo(d: Date, n: number): Date {
   const r = new Date(d); r.setDate(r.getDate() + n); return r
 }
 
@@ -14,20 +19,30 @@ function toMonday(d: Date): Date {
   return r
 }
 
-function toYMD(d: Date): string { return d.toISOString().split('T')[0] }
+// Use the week's Thursday to determine which month/year the week "belongs to"
+// (ISO 8601 standard — prevents Jun-29 week showing as June when it's July's Week 1)
+function weekMonth(monday: Date): { year: number; month: number } {
+  const thu = addDaysTo(monday, 3)
+  return { year: thu.getFullYear(), month: thu.getMonth() }
+}
 
+// Return weeks whose Thursday falls in the given month
 function getWeeksOfMonth(year: number, month: number): { label: string; monday: string }[] {
-  const first = new Date(year, month, 1)
-  const last = new Date(year, month + 1, 0)
   const weeks: { label: string; monday: string }[] = []
-  let cur = toMonday(first)
+  // Find first Thursday in the month
+  const firstThu = new Date(year, month, 1)
+  while (firstThu.getDay() !== 4) firstThu.setDate(firstThu.getDate() + 1)
+  // Step back to Monday of that week
+  let cur = addDaysTo(firstThu, -3)
   let idx = 1
-  while (cur <= last) {
-    const end = addDays(cur, 6)
+  while (true) {
+    const thu = addDaysTo(cur, 3)
+    if (thu.getFullYear() !== year || thu.getMonth() !== month) break
+    const end = addDaysTo(cur, 6)
     const s = cur.toLocaleDateString('en', { day: 'numeric', month: 'short' })
     const e = end.toLocaleDateString('en', { day: 'numeric', month: 'short' })
     weeks.push({ label: `Week ${idx} · ${s} – ${e}`, monday: toYMD(cur) })
-    cur = addDays(cur, 7)
+    cur = addDaysTo(cur, 7)
     idx++
   }
   return weeks
@@ -38,12 +53,12 @@ export default function WeekNav({ monday, view }: { monday: string; view: string
   const pathname = usePathname()
 
   const mondayDate = new Date(monday + 'T00:00:00')
-  const year = mondayDate.getFullYear()
-  const month = mondayDate.getMonth()
+  const { year, month } = weekMonth(mondayDate)
 
-  const prevWeek = toYMD(addDays(mondayDate, -7))
-  const nextWeek = toYMD(addDays(mondayDate, 7))
+  const prevWeek = toYMD(addDaysTo(mondayDate, -7))
+  const nextWeek = toYMD(addDaysTo(mondayDate, 7))
   const weeks = getWeeksOfMonth(year, month)
+  const currentMonthVal = `${year}-${month}` // "2026-6" for July
 
   const monthOptions: { value: string; label: string }[] = []
   for (let i = -6; i <= 6; i++) {
@@ -89,10 +104,11 @@ export default function WeekNav({ monday, view }: { monday: string; view: string
         </button>
       </div>
 
+      {/* Month dropdown */}
       <div>
         <div className="text-xs text-slate-400 mb-1">Month</div>
         <select
-          value={`${year}-${month}`}
+          value={currentMonthVal}
           onChange={e => changeMonth(e.target.value)}
           className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
         >
@@ -100,6 +116,7 @@ export default function WeekNav({ monday, view }: { monday: string; view: string
         </select>
       </div>
 
+      {/* Week dropdown — only in week view */}
       {!isMonth && (
         <>
           <div>
