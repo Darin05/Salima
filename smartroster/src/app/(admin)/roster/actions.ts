@@ -132,6 +132,12 @@ export async function generateRoster(orgId: string, weekStart: string, mode: 'we
     const allDows = [0, 1, 2, 3, 4, 5, 6]
     const excluded = new Set<number>(fixedOffDows)
     if (!includesWeekends) { excluded.add(0); excluded.add(6) }
+    // Exclude days adjacent to any fixed-off day to prevent 3-day streaks
+    // e.g. Friday fixed → exclude Thursday (before) and Saturday (after)
+    for (const fixedDow of fixedOffDows) {
+      excluded.add((fixedDow + 6) % 7) // day before fixed off
+      excluded.add((fixedDow + 1) % 7) // day after fixed off
+    }
     const pool = allDows.filter(d => !excluded.has(d))
 
     if (pool.length === 0) continue
