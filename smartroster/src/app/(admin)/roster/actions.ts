@@ -143,13 +143,13 @@ export async function generateRoster(orgId: string, weekStart: string, mode: 'we
     if (pool.length === 0) continue
 
     // Build set of operational week-start dates for this pattern
-    const weekStartFn = includesWeekends ? getWeekSaturday : getWeekMonday
-    const weekNumFn = includesWeekends ? getSatWeekNumber : getISOWeek
+    // Use Mon-based weeks for all patterns — the pool restriction [0,1,2,3]
+    // already prevents Thu+Fri+Sat 3-day streaks without needing Sat-based weeks
     const weekStartSet = new Set<string>()
-    for (const d of allDays) weekStartSet.add(weekStartFn(d))
+    for (const d of allDays) weekStartSet.add(getWeekMonday(d))
 
     for (const weekStart of weekStartSet) {
-      const weekNum = weekNumFn(weekStart)
+      const weekNum = getISOWeek(weekStart)
       group.forEach((emp, i) => {
         const slot = (Math.floor(i / maxOffPerDay) + weekNum) % pool.length
         rotatingOffMap.set(`${emp.id}|${weekStart}`, pool[slot])
@@ -195,7 +195,7 @@ export async function generateRoster(orgId: string, weekStart: string, mode: 'we
 
         // Rotating off day check — use the same week-start as was stored in rotatingOffMap
         if (isRotating) {
-          const weekStart = includesWeekends ? getWeekSaturday(dateStr) : getWeekMonday(dateStr)
+          const weekStart = getWeekMonday(dateStr)
           const rotDow = rotatingOffMap.get(`${emp.id}|${weekStart}`)
           if (rotDow !== undefined && dow === rotDow) continue
         }
