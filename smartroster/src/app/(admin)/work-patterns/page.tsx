@@ -16,7 +16,7 @@ export default async function WorkPatternsPage() {
       <PageHeader title="Work Patterns" subtitle="Configure working days and off rules" action={<WorkPatternForm orgId={profile!.org_id} />} />
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {patterns?.map(p => (
-          <WorkPatternCard key={p.id} id={p.id} name={p.name} working_days={p.working_days} off_type={p.off_type} off_days={p.off_days ?? []} />
+          <WorkPatternCard key={p.id} id={p.id} name={p.name} working_days={p.working_days} off_type={p.off_type} off_days={p.off_days ?? []} includes_weekends={p.includes_weekends ?? false} max_off_per_day={p.max_off_per_day ?? 2} />
         ))}
         {!patterns?.length && (
           <div className="col-span-3 text-center py-16 text-slate-400 bg-white rounded-2xl border border-slate-200">

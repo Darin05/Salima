@@ -3,13 +3,12 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { deleteWorkPattern } from './actions'
 
-const offTypeLabel: Record<string, string> = {
-  fixed: 'Fixed Weekly Off',
-  rotating_weekly: 'Rotating Off (Weekly)',
-  rotating_monthly: 'Rotating Off (Monthly)',
-}
-
-export default function WorkPatternCard({ id, name, working_days, off_type, off_days }: { id: string; name: string; working_days: number; off_type: string; off_days: string[] }) {
+export default function WorkPatternCard({
+  id, name, working_days, off_type, off_days, includes_weekends, max_off_per_day,
+}: {
+  id: string; name: string; working_days: number; off_type: string; off_days: string[]
+  includes_weekends: boolean; max_off_per_day: number
+}) {
   const [confirming, setConfirming] = useState(false)
   const [loading, setLoading] = useState(false)
   const router = useRouter()
@@ -23,11 +22,16 @@ export default function WorkPatternCard({ id, name, working_days, off_type, off_
   return (
     <div className="bg-white rounded-2xl border border-slate-200 p-6 flex items-start justify-between">
       <div>
-        <div className="font-semibold text-slate-900 text-lg mb-2">{name}</div>
-        <div className="text-sm text-slate-600">📅 {working_days} working days/week</div>
-        <div className="text-sm text-slate-500 mt-1">{offTypeLabel[off_type]}</div>
+        <div className="font-semibold text-slate-900 text-base mb-2">{name}</div>
+        <div className="text-sm text-slate-500">{includes_weekends ? '📞 Contact Center (Sat–Thu)' : '🏢 Office (Mon–Fri)'}</div>
+        <div className="text-sm text-slate-600 mt-1">📅 {working_days} working days/week</div>
+        {off_type === 'rotating_weekly' ? (
+          <div className="text-sm text-indigo-600 mt-1">🔄 Rotating weekly off · max {max_off_per_day} per day</div>
+        ) : (
+          <div className="text-sm text-slate-500 mt-1">Fixed off days only</div>
+        )}
         {off_days?.length > 0 && (
-          <div className="text-xs text-slate-400 mt-1">Off: {off_days.join(', ')}</div>
+          <div className="text-xs text-slate-400 mt-1">Fixed off: {off_days.join(', ')}</div>
         )}
       </div>
       {confirming ? (

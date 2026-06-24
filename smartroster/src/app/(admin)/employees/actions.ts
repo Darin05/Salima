@@ -37,7 +37,7 @@ export async function createEmployee(formData: {
   return { success: true }
 }
 
-export async function updateEmployee(id: string, data: { name: string; team_id: string | null; shift_id: string | null }) {
+export async function updateEmployee(id: string, data: { name: string; team_id: string | null; shift_id: string | null; work_pattern_id?: string | null }) {
   const admin = createAdminClient()
   const { error } = await admin.from('profiles').update(data).eq('id', id)
   if (error) return { error: error.message }
