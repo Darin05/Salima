@@ -31,5 +31,7 @@ export async function updateRosterEntry({
   }
 
   revalidatePath('/dashboard')
+  revalidatePath('/me')
+  revalidatePath('/me/schedule')
   return { success: true }
 }

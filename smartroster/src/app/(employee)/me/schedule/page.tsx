@@ -72,9 +72,8 @@ export default async function SchedulePage({
       .eq('id', user.id)
       .single(),
     admin.from('roster_entries')
-      .select('date, shift_id, break_ids, break_slot, shifts(name, start_time, end_time, color), rosters!inner(status)')
+      .select('date, shift_id, break_ids, break_slot, shifts(name, start_time, end_time, color)')
       .eq('employee_id', user.id)
-      .eq('rosters.status', 'published')
       .gte('date', toYMD(rangeStart))
       .lte('date', toYMD(rangeEnd))
       .order('date'),
