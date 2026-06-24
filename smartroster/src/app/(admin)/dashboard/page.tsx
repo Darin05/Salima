@@ -36,6 +36,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const { week } = await searchParams
   const today = new Date().toISOString().split('T')[0]
   const monday = week ? toMonday(week) : toMonday(today)
+  // Show full Mon–Sun so weekend workers appear
   const weekDates = [0,1,2,3,4,5,6].map(i => addDays(monday, i))
   const sunday = weekDates[6]
 
@@ -52,18 +53,21 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     { data: shifts },
     { data: breaks },
     { data: leaves },
+    { data: rosterEntries },
     { count: pendingLeave },
   ] = await Promise.all([
     admin.from('profiles').select('id, name, shift_id, team_id, shifts(name, start_time, end_time, color), teams(name)').eq('org_id', orgId).eq('is_active', true).eq('role', 'employee').order('name'),
     admin.from('shifts').select('*').eq('org_id', orgId),
     admin.from('break_rules').select('*').eq('org_id', orgId).order('offset_minutes'),
     admin.from('leave_requests').select('employee_id, start_date, end_date, type, status').eq('org_id', orgId).in('status', ['approved', 'pending']).lte('start_date', sunday).gte('end_date', monday),
+    // Fetch actual roster entries (any status) for this week
+    admin.from('roster_entries').select('employee_id, date, shift_id, break_slot, shifts(name, start_time, end_time, color), rosters!inner(status, org_id)')
+      .eq('rosters.org_id', orgId)
+      .gte('date', monday).lte('date', sunday),
     admin.from('leave_requests').select('*', { count: 'exact', head: true }).eq('org_id', orgId).eq('status', 'pending'),
   ])
 
   const approvedLeaves = (leaves ?? []).filter((l: any) => l.status === 'approved')
-
-  // Build leave lookup: empId|date → leave type
   const leaveMap = new Map<string, string>()
   for (const lv of approvedLeaves) {
     let d = new Date((lv.start_date as string) + 'T00:00:00')
@@ -74,32 +78,43 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     }
   }
 
+  // Build a lookup of actual roster entries: empId|date → entry
+  const entryMap = new Map<string, any>()
+  for (const e of rosterEntries ?? []) {
+    entryMap.set(`${e.employee_id}|${e.date}`, e)
+  }
+  const hasRoster = (rosterEntries ?? []).length > 0
+
   const empList = (employees ?? []) as any[]
   const totalEmployees = empList.length
 
-  // Compute staggered break slot per employee (sorted by name within each shift)
+  // Break slot from actual entries (already stored), or compute from sort order as fallback
   const maxConcurrent = Math.min(...(breaks ?? []).map((b: any) => b.max_concurrent ?? 2).filter((n: number) => n > 0)) || 2
-  const empBreakSlot = new Map<string, number>()
+  const empBreakSlotFallback = new Map<string, number>()
   const byShift = new Map<string, any[]>()
   for (const emp of empList) {
-    const sid = emp.shift_id
-    if (!sid) continue
-    if (!byShift.has(sid)) byShift.set(sid, [])
-    byShift.get(sid)!.push(emp)
+    if (!emp.shift_id) continue
+    if (!byShift.has(emp.shift_id)) byShift.set(emp.shift_id, [])
+    byShift.get(emp.shift_id)!.push(emp)
   }
   for (const group of byShift.values()) {
-    group.sort((a, b) => a.name.localeCompare(b.name))
-    group.forEach((emp, i) => empBreakSlot.set(emp.id, Math.floor(i / maxConcurrent)))
+    group.sort((a: any, b: any) => a.name.localeCompare(b.name))
+    group.forEach((emp: any, i: number) => empBreakSlotFallback.set(emp.id, Math.floor(i / maxConcurrent)))
   }
 
-  // Per-day coverage
+  // Per-day coverage using actual roster entries if available
   const coverage = weekDates.map(date => {
     let working = 0, onLeave = 0, off = 0
     for (const emp of empList) {
       const lv = leaveMap.get(`${emp.id}|${date}`)
-      if (lv) onLeave++
-      else if (emp.shift_id) working++
-      else off++
+      if (lv) { onLeave++; continue }
+      if (hasRoster) {
+        if (entryMap.has(`${emp.id}|${date}`)) working++
+        else off++
+      } else {
+        if (emp.shift_id) working++
+        else off++
+      }
     }
     return { date, working, onLeave, off }
   })
@@ -110,16 +125,16 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-start justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-xl font-bold text-slate-900">Dashboard</h1>
-          <p className="text-xs text-slate-400 mt-0.5">Selected week drives the roster. App generates the week, you edit only where needed.</p>
+          <p className="text-xs text-slate-400 mt-0.5">
+            {hasRoster ? 'Showing actual generated roster for this week.' : 'No roster generated for this week — showing estimated coverage based on shifts.'}
+          </p>
         </div>
         <WeekNav monday={monday} />
       </div>
 
-      {/* KPI Row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white rounded-xl border border-slate-200 p-5">
           <div className="text-xs text-slate-500 font-medium uppercase tracking-wide">Active agents</div>
@@ -129,7 +144,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         <div className="bg-white rounded-xl border border-slate-200 p-5">
           <div className="text-xs text-slate-500 font-medium uppercase tracking-wide">Total weekly coverage</div>
           <div className="text-3xl font-bold text-slate-900 mt-1">{coverage.reduce((s,c) => s + c.working, 0)}</div>
-          <div className="text-xs text-slate-400 mt-1">Required {totalEmployees * 5}</div>
+          <div className="text-xs text-slate-400 mt-1">{hasRoster ? 'From generated roster' : 'Estimated'}</div>
         </div>
         <div className="bg-white rounded-xl border border-slate-200 p-5">
           <div className="text-xs text-slate-500 font-medium uppercase tracking-wide">Under-covered days</div>
@@ -143,7 +158,6 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         </div>
       </div>
 
-      {/* Daily overview */}
       {todayCoverage && (
         <div className="bg-white rounded-xl border border-slate-200 p-5">
           <h2 className="text-sm font-semibold text-slate-700 mb-4">
@@ -151,7 +165,11 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           </h2>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             {(shifts ?? []).slice(0, 2).map((sh: any, i: number) => {
-              const count = empList.filter(e => e.shift_id === sh.id && !leaveMap.has(`${e.id}|${todayCoverage.date}`)).length
+              const count = empList.filter(e => {
+                if (leaveMap.has(`${e.id}|${todayCoverage.date}`)) return false
+                if (hasRoster) return entryMap.get(`${e.id}|${todayCoverage.date}`)?.shift_id === sh.id
+                return e.shift_id === sh.id
+              }).length
               return (
                 <div key={sh.id} className="p-4 bg-slate-50 rounded-lg">
                   <div className="text-xs text-slate-500 font-medium">{sh.name}</div>
@@ -166,15 +184,14 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
               <div className="text-xs text-slate-400">Unavailable today</div>
             </div>
             <div className="p-4 bg-slate-50 rounded-lg">
-              <div className="text-xs text-slate-500 font-medium">No shift assigned</div>
+              <div className="text-xs text-slate-500 font-medium">{hasRoster ? 'Day off (roster)' : 'No shift assigned'}</div>
               <div className="text-2xl font-bold text-slate-900 mt-1">{todayCoverage.off}</div>
-              <div className="text-xs text-slate-400">Missing shift setup</div>
+              <div className="text-xs text-slate-400">{hasRoster ? 'Per generated roster' : 'Missing shift setup'}</div>
             </div>
           </div>
         </div>
       )}
 
-      {/* Week coverage snapshot */}
       <div className="bg-white rounded-xl border border-slate-200 p-5">
         <h2 className="text-sm font-semibold text-slate-700 mb-4">
           Week coverage snapshot · {formatDay(monday)} – {formatDay(sunday)}
@@ -191,7 +208,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                 <div className="text-xs text-slate-400 mt-1 space-y-0.5">
                   <div>Working {working}</div>
                   {onLeave > 0 && <div>Leave {onLeave}</div>}
-                  {off > 0 && <div>No shift {off}</div>}
+                  {off > 0 && <div>Off {off}</div>}
                 </div>
               </div>
             )
@@ -199,11 +216,15 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         </div>
       </div>
 
-      {/* Auto-generated weekly roster */}
+      {/* Roster table — reads from actual entries when available */}
       <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
         <div className="px-5 py-4 border-b border-slate-100">
-          <h2 className="text-sm font-semibold text-slate-700">Auto-generated weekly roster · {formatDay(monday)} – {formatDay(sunday)}</h2>
-          <p className="text-xs text-slate-400 mt-0.5">Based on each employee's assigned shift and approved leave.</p>
+          <h2 className="text-sm font-semibold text-slate-700">
+            Weekly roster · {formatDay(monday)} – {formatDay(sunday)}
+          </h2>
+          <p className="text-xs text-slate-400 mt-0.5">
+            {hasRoster ? 'Showing actual generated roster (off days and rotation applied).' : 'No roster generated yet — estimated from shift assignments.'}
+          </p>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-xs min-w-[900px]">
@@ -211,16 +232,16 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
               <tr className="border-b border-slate-100 bg-slate-50">
                 <th className="text-left px-4 py-3 font-medium text-slate-500 w-44 sticky left-0 bg-slate-50">Employee</th>
                 {weekDates.map(date => (
-                  <th key={date} className={`px-2 py-3 font-medium text-slate-500 text-center min-w-[110px] ${date === today ? 'bg-indigo-50 text-indigo-600' : ''}`}>
+                  <th key={date} className={`px-2 py-3 font-medium text-slate-500 text-center min-w-[100px] ${date === today ? 'bg-indigo-50 text-indigo-600' : ''}`}>
                     <div>{new Date(date + 'T00:00:00').toLocaleDateString('en', { weekday: 'short', day: 'numeric', month: 'short' })}</div>
-                    <div className="font-normal text-slate-400">Avail {coverage.find(c=>c.date===date)?.working} · Req {totalEmployees}</div>
+                    <div className="font-normal text-slate-400">Work {coverage.find(c=>c.date===date)?.working}</div>
                   </th>
                 ))}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
               {empList.map(emp => {
-                const shift = emp.shifts as any
+                const defaultShift = emp.shifts as any
                 const team = emp.teams as any
                 return (
                   <tr key={emp.id} className="hover:bg-slate-50">
@@ -232,7 +253,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                         </div>
                         <div>
                           <div className="font-medium text-slate-800 text-xs leading-tight">{emp.name}</div>
-                          <div className="text-slate-400 text-xs">{team?.name ?? (shift?.name ?? 'No shift')}</div>
+                          <div className="text-slate-400 text-xs">{team?.name ?? (defaultShift?.name ?? 'No shift')}</div>
                         </div>
                       </div>
                     </td>
@@ -248,6 +269,21 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                           </td>
                         )
                       }
+
+                      const entry = hasRoster ? entryMap.get(`${emp.id}|${date}`) : null
+
+                      if (hasRoster && !entry) {
+                        // Off day from roster (rotating off or fixed off)
+                        return (
+                          <td key={date} className="px-2 py-2">
+                            <div className="rounded-lg bg-slate-50 border border-slate-100 p-2 text-center">
+                              <div className="text-slate-400 text-xs font-medium">Day Off</div>
+                            </div>
+                          </td>
+                        )
+                      }
+
+                      const shift = (entry?.shifts ?? defaultShift) as any
                       if (!shift) {
                         return (
                           <td key={date} className="px-2 py-2">
@@ -257,6 +293,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                           </td>
                         )
                       }
+
+                      const breakSlot = entry?.break_slot ?? empBreakSlotFallback.get(emp.id) ?? 0
                       return (
                         <td key={date} className="px-2 py-2">
                           <div className="rounded-lg bg-green-50 border border-green-100 p-2">
@@ -264,7 +302,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                             <div className="text-green-700 text-xs mt-0.5">{shift.name} · {formatTime(shift.start_time)}–{formatTime(shift.end_time)}</div>
                             {(breaks as any[])?.map((b: any, i: number) => (
                               <div key={b.id} className="text-green-600 text-xs mt-0.5">
-                                B{i+1} {computeBreakTime(shift.start_time, shift.end_time, b.offset_from ?? 'start', b.offset_minutes ?? 120, (empBreakSlot.get(emp.id) ?? 0) * 15)}
+                                B{i+1} {computeBreakTime(shift.start_time, shift.end_time, b.offset_from ?? 'start', b.offset_minutes ?? 120, breakSlot * 15)}
                               </div>
                             ))}
                           </div>
