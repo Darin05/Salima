@@ -3,34 +3,52 @@ import { useRouter, usePathname } from 'next/navigation'
 
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December']
 
-function getWeekStart(d: Date): Date {
-  const dow = d.getDay()
-  // Week starts Saturday: SAT=6 → diff=0, SUN=0 → diff=1, ..., FRI=5 → diff=6
-  const diff = dow === 6 ? 0 : dow + 1
-  const sat = new Date(d)
-  sat.setDate(d.getDate() - diff)
-  return sat
+// Use local date parts to avoid UTC/timezone drift
+function toYMD(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+function toYM(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
 }
 
 function addDays(d: Date, n: number): Date {
   const r = new Date(d); r.setDate(r.getDate() + n); return r
 }
 
-function toYMD(d: Date): string { return d.toISOString().split('T')[0] }
+// Week starts Saturday
+function getWeekStart(d: Date): Date {
+  const dow = d.getDay()
+  const diff = dow === 6 ? 0 : dow + 1
+  const sat = new Date(d)
+  sat.setDate(d.getDate() - diff)
+  return sat
+}
 
+// Use Wednesday (Sat+4) of the Sat-Fri week to determine which month it belongs to
+function weekToMonth(satDate: Date): string {
+  return toYM(addDays(satDate, 4))
+}
+
+// Return Sat-Fri weeks whose Wednesday falls in the given YYYY-MM month
 function getWeeksInMonth(month: string): { label: string; weekStart: string }[] {
   const [yr, mo] = month.split('-').map(Number)
-  const first = new Date(yr, mo - 1, 1)
-  const last = new Date(yr, mo, 0)
   const weeks: { label: string; weekStart: string }[] = []
-  let w = getWeekStart(first)
+  // First Wednesday of the month
+  const firstWed = new Date(yr, mo - 1, 1)
+  while (firstWed.getDay() !== 3) firstWed.setDate(firstWed.getDate() + 1)
+  // Go back 4 days to get the Saturday of that week
+  let cur = addDays(firstWed, -4)
   let idx = 1
-  while (w <= last) {
-    const end = addDays(w, 6)
-    const s = w.toLocaleDateString('en', { day: 'numeric', month: 'short' })
+  while (true) {
+    const wed = addDays(cur, 4)
+    const wedMonth = `${wed.getFullYear()}-${String(wed.getMonth() + 1).padStart(2, '0')}`
+    if (wedMonth !== month) break
+    const end = addDays(cur, 6)
+    const s = cur.toLocaleDateString('en', { day: 'numeric', month: 'short' })
     const e = end.toLocaleDateString('en', { day: 'numeric', month: 'short' })
-    weeks.push({ label: `Week ${idx}: ${s} - ${e}`, weekStart: toYMD(w) })
-    w = addDays(w, 7)
+    weeks.push({ label: `Week ${idx}: ${s} – ${e}`, weekStart: toYMD(cur) })
+    cur = addDays(cur, 7)
     idx++
   }
   return weeks
@@ -55,8 +73,9 @@ export default function ScheduleNav({ view, currentWeek, currentMonth }: {
   const prevWeek = toYMD(addDays(weekDate, -7))
   const nextWeek = toYMD(addDays(weekDate, 7))
 
-  const weekMonth = `${weekDate.getFullYear()}-${String(weekDate.getMonth() + 1).padStart(2, '0')}`
-  const weeksInMonth = getWeeksInMonth(weekMonth)
+  // Derive month from Wednesday of the week (not Saturday, to avoid month drift)
+  const derivedWeekMonth = weekToMonth(weekDate)
+  const weeksInMonth = getWeeksInMonth(derivedWeekMonth)
 
   const [curYr] = currentMonth.split('-').map(Number)
   const monthOptions: { value: string; label: string }[] = []
@@ -67,7 +86,7 @@ export default function ScheduleNav({ view, currentWeek, currentMonth }: {
     }
   }
 
-  const rangeLabel = `${weekDate.toLocaleDateString('en', { day: 'numeric', month: 'short', year: 'numeric' })} - ${weekEnd.toLocaleDateString('en', { day: 'numeric', month: 'short', year: 'numeric' })}`
+  const rangeLabel = `${weekDate.toLocaleDateString('en', { day: 'numeric', month: 'short' })} – ${weekEnd.toLocaleDateString('en', { day: 'numeric', month: 'short', year: 'numeric' })}`
 
   return (
     <div className="mb-4">
@@ -92,20 +111,31 @@ export default function ScheduleNav({ view, currentWeek, currentMonth }: {
               className="px-3 py-1.5 text-sm border border-slate-200 rounded-lg bg-white hover:bg-slate-50 font-medium">Next →</button>
           </div>
           <div className="flex gap-2">
-            <select value={weekMonth}
-              onChange={e => { const ws = getWeeksInMonth(e.target.value); nav({ view: 'week', week: ws[0]?.weekStart ?? currentWeek }) }}
-              className="flex-1 text-sm border border-slate-200 rounded-lg px-2 py-1.5 bg-white">
+            <select
+              value={derivedWeekMonth}
+              onChange={e => {
+                const ws = getWeeksInMonth(e.target.value)
+                nav({ view: 'week', week: ws[0]?.weekStart ?? currentWeek })
+              }}
+              className="flex-1 text-sm border border-slate-200 rounded-lg px-2 py-1.5 bg-white"
+            >
               {monthOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
-            <select value={currentWeek} onChange={e => nav({ view: 'week', week: e.target.value })}
-              className="flex-1 text-sm border border-slate-200 rounded-lg px-2 py-1.5 bg-white">
+            <select
+              value={currentWeek}
+              onChange={e => nav({ view: 'week', week: e.target.value })}
+              className="flex-1 text-sm border border-slate-200 rounded-lg px-2 py-1.5 bg-white"
+            >
               {weeksInMonth.map(w => <option key={w.weekStart} value={w.weekStart}>{w.label}</option>)}
             </select>
           </div>
         </div>
       ) : (
-        <select value={currentMonth} onChange={e => nav({ view: 'month', month: e.target.value })}
-          className="text-sm border border-slate-200 rounded-lg px-3 py-2 bg-white font-medium">
+        <select
+          value={currentMonth}
+          onChange={e => nav({ view: 'month', month: e.target.value })}
+          className="text-sm border border-slate-200 rounded-lg px-3 py-2 bg-white font-medium"
+        >
           {monthOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
       )}
