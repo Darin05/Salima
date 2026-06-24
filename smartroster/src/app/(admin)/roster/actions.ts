@@ -24,27 +24,12 @@ function getWeekMonday(dateStr: string): string {
   return d.toISOString().split('T')[0]
 }
 
-// For contact-center (Sat–Fri) patterns: find the Saturday that starts the week
-function getWeekSaturday(dateStr: string): string {
-  const d = new Date(dateStr + 'T00:00:00')
-  const dow = d.getDay()
-  d.setDate(d.getDate() - (dow === 6 ? 0 : dow + 1))
-  return d.toISOString().split('T')[0]
-}
-
 function getISOWeek(dateStr: string): number {
   const d = new Date(dateStr + 'T00:00:00')
   const utc = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()))
   utc.setUTCDate(utc.getUTCDate() + 4 - (utc.getUTCDay() || 7))
   const yearStart = new Date(Date.UTC(utc.getUTCFullYear(), 0, 1))
   return Math.ceil(((utc.getTime() - yearStart.getTime()) / 86400000 + 1) / 7)
-}
-
-// Sat-based week sequence number (weeks since a fixed Saturday epoch)
-function getSatWeekNumber(satDateStr: string): number {
-  const d = new Date(satDateStr + 'T00:00:00')
-  const epoch = new Date('2023-12-30T00:00:00') // a known Saturday
-  return Math.round((d.getTime() - epoch.getTime()) / (7 * 24 * 60 * 60 * 1000))
 }
 
 function toMonday(dateStr: string) {
@@ -107,11 +92,13 @@ export async function generateRoster(orgId: string, weekStart: string, mode: 'we
 
   const allDays = getAllDaysInRange(rangeStart, rangeEnd)
 
-  // Pre-compute rotating off day per employee per week.
-  // Contact-center patterns (includes_weekends) use Sat-Fri weeks to avoid
-  // two rotating offs appearing in the same Sat-Fri operational week.
-  // Office patterns use Mon-Sun (ISO) weeks.
-  const rotatingOffMap = new Map<string, number>() // key: `${empId}|${weekStart}` → DOW off
+  // Collect all unique week Mondays in the range
+  const weekMondaySet = new Set<string>()
+  for (const d of allDays) weekMondaySet.add(getWeekMonday(d))
+
+  // Pre-compute rotating off day per employee per week
+  // Group employees by work_pattern_id so slot assignment is within each pattern group
+  const rotatingOffMap = new Map<string, number>() // key: `${empId}|${weekMonday}` → DOW off
 
   const patternGroups = new Map<string, any[]>()
   for (const emp of (employees ?? []) as any[]) {
@@ -128,31 +115,21 @@ export async function generateRoster(orgId: string, weekStart: string, mode: 'we
     const maxOffPerDay = pattern.max_off_per_day ?? 2
     const includesWeekends = pattern.includes_weekends ?? false
 
-    // Pool of days the rotating off can fall on
+    // Pool of days the rotating off can fall on:
+    // All DOWs minus fixed-off days, and exclude weekends if office pattern
     const allDows = [0, 1, 2, 3, 4, 5, 6]
     const excluded = new Set<number>(fixedOffDows)
     if (!includesWeekends) { excluded.add(0); excluded.add(6) }
-    // Exclude days adjacent to any fixed-off day to prevent 3-day streaks
-    // e.g. Friday fixed → exclude Thursday (before) and Saturday (after)
-    for (const fixedDow of fixedOffDows) {
-      excluded.add((fixedDow + 6) % 7) // day before fixed off
-      excluded.add((fixedDow + 1) % 7) // day after fixed off
-    }
     const pool = allDows.filter(d => !excluded.has(d))
 
     if (pool.length === 0) continue
 
-    // Build set of operational week-start dates for this pattern
-    // Use Mon-based weeks for all patterns — the pool restriction [0,1,2,3]
-    // already prevents Thu+Fri+Sat 3-day streaks without needing Sat-based weeks
-    const weekStartSet = new Set<string>()
-    for (const d of allDays) weekStartSet.add(getWeekMonday(d))
-
-    for (const weekStart of weekStartSet) {
-      const weekNum = getISOWeek(weekStart)
+    for (const weekMonday of weekMondaySet) {
+      const weekNum = getISOWeek(weekMonday)
+      // Each pair of maxOffPerDay employees shares a slot; slot rotates each week
       group.forEach((emp, i) => {
         const slot = (Math.floor(i / maxOffPerDay) + weekNum) % pool.length
-        rotatingOffMap.set(`${emp.id}|${weekStart}`, pool[slot])
+        rotatingOffMap.set(`${emp.id}|${weekMonday}`, pool[slot])
       })
     }
   }
@@ -193,10 +170,10 @@ export async function generateRoster(orgId: string, weekStart: string, mode: 'we
         // If no work pattern or office-only: skip weekends
         if (!includesWeekends && (dow === 0 || dow === 6)) continue
 
-        // Rotating off day check — use the same week-start as was stored in rotatingOffMap
+        // Rotating off day check
         if (isRotating) {
-          const weekStart = getWeekMonday(dateStr)
-          const rotDow = rotatingOffMap.get(`${emp.id}|${weekStart}`)
+          const weekMonday = getWeekMonday(dateStr)
+          const rotDow = rotatingOffMap.get(`${emp.id}|${weekMonday}`)
           if (rotDow !== undefined && dow === rotDow) continue
         }
 
