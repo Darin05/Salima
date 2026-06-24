@@ -46,7 +46,9 @@ export async function generateRoster(orgId: string, weekStart: string, mode: 'we
   let rangeStart: string, rangeEnd: string
 
   if (mode === 'month') {
-    const [year, month] = monday.split('-').map(Number)
+    // Use original weekStart (passed as YYYY-MM-01) to get the month,
+    // not monday — toMonday() can shift July 1 → June 29, causing wrong month.
+    const [year, month] = weekStart.split('-').map(Number)
     rangeStart = `${year}-${String(month).padStart(2, '0')}-01`
     rangeEnd = new Date(year, month, 0).toISOString().split('T')[0]
   } else {

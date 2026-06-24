@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 
 const nav = [
   { href: '/dashboard', label: 'Dashboard' },
-  { href: '/roster', label: 'Weekly Planner' },
+  { href: '/roster', label: 'Generate Roster' },
   { href: '/leave', label: 'Leave and Holidays' },
   { href: '/breaks', label: 'Break Control' },
   { href: '/shifts', label: 'Shifts' },
