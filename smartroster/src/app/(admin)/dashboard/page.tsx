@@ -102,7 +102,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     admin.from('roster_entries').select('id, employee_id, date, shift_id, break_slot, roster_id, shifts(name, start_time, end_time, color), rosters!inner(status, org_id)')
       .eq('rosters.org_id', orgId)
       .gte('date', rangeStart).lte('date', rangeEnd),
-    admin.from('rosters').select('id, week_start, status').eq('org_id', orgId).gte('week_start', rangeStart).lte('week_start', rangeEnd),
+    admin.from('rosters').select('id, week_start, status').eq('org_id', orgId).lte('week_start', rangeEnd).order('week_start', { ascending: false }).limit(10),
     admin.from('leave_requests').select('*', { count: 'exact', head: true }).eq('org_id', orgId).eq('status', 'pending'),
   ])
 
