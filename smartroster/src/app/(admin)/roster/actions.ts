@@ -203,9 +203,6 @@ export async function publishRoster(id: string) {
   const { error } = await admin.from('rosters').update({ status: 'published' }).eq('id', id)
   if (error) return { error: error.message }
   revalidatePath('/roster')
-  revalidatePath('/dashboard')
-  revalidatePath('/me')
-  revalidatePath('/me/schedule')
   return { success: true }
 }
 

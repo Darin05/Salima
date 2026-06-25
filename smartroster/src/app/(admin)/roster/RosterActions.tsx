@@ -11,8 +11,8 @@ export default function RosterActions({ id, status }: { id: string; status: stri
   async function publish() {
     setLoading(true)
     await publishRoster(id)
-    router.refresh()
     setLoading(false)
+    router.refresh()
   }
   async function remove() {
     setLoading(true)
