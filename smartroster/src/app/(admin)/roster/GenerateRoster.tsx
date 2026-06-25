@@ -14,7 +14,7 @@ function currentMonth() {
 
 export default function GenerateRoster({ orgId }: { orgId: string }) {
   const [open, setOpen] = useState(false)
-  const [mode, setMode] = useState<'week' | 'month'>('week')
+  const [mode, setMode] = useState<'week' | 'month'>('month')
   const [weekStart, setWeekStart] = useState(getMonday(new Date()))
   const [month, setMonth] = useState(currentMonth())
   const [generating, setGenerating] = useState(false)
@@ -62,14 +62,14 @@ export default function GenerateRoster({ orgId }: { orgId: string }) {
                   <label className="block text-sm font-medium text-slate-700 mb-1">Week Starting (Monday)</label>
                   <input type="date" value={weekStart} onChange={e => setWeekStart(e.target.value)}
                     className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
-                  <p className="text-xs text-slate-400 mt-1">Generates Mon–Fri (5 days)</p>
+                  <p className="text-xs text-slate-400 mt-1">Generates Sat–Thu for that week</p>
                 </div>
               ) : (
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Month</label>
                   <input type="month" value={month} onChange={e => setMonth(e.target.value)}
                     className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
-                  <p className="text-xs text-slate-400 mt-1">Generates all Mon–Fri of the month</p>
+                  <p className="text-xs text-slate-400 mt-1">Generates all working days of the month</p>
                 </div>
               )}
 
