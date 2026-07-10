@@ -1,0 +1,111 @@
+{
+  "theme_strategy": {
+    "theme": "light",
+    "rationale": "Quiet luxury beauty brands thrive on lit-from-within warmth, relying on cream, rose-gold, and champagne tones. Dark mode would contradict the soft, feminine aesthetic. Focus on a single, perfectly executed light theme.",
+    "brand_name": "Serenne Beauty"
+  },
+  "rtl_support": {
+    "enabled": true,
+    "languages": ["en", "ar"],
+    "guidelines": "Crucial: Build mobile-first and use logical Tailwind CSS properties for spacing and alignment (e.g., `ms-4`, `pe-8`, `text-start`, `border-s-2`) instead of physical ones (`ml-4`, `pr-8`, `text-left`, `border-l-2`). This ensures automatic mirroring when the `dir` attribute is toggled on the `html` tag. Test with `dir=\"rtl\"` in your root element."
+  },
+  "typography": {
+    "fonts": {
+      "english_headings": "Playfair Display, serif",
+      "english_body": "Montserrat, sans-serif",
+      "arabic_headings": "El Messiri, sans-serif",
+      "arabic_body": "Tajawal, sans-serif"
+    },
+    "instructions": "Import these fonts via Google Fonts in index.css. Use `dir=\"rtl\"` or an active language state to dynamically swap Tailwind font-family utility classes between English and Arabic font stacks.",
+    "scales": {
+      "h1": "text-4xl sm:text-5xl lg:text-6xl tracking-tight leading-tight",
+      "h2": "text-2xl sm:text-3xl lg:text-4xl tracking-tight leading-snug",
+      "h3": "text-xl sm:text-2xl",
+      "body": "text-base leading-relaxed",
+      "labels": "text-xs tracking-[0.2em] uppercase"
+    }
+  },
+  "colors": {
+    "palette": {
+      "background_cream": "#FAF3EF",
+      "sand_tint": "#F1E5DC",
+      "blush_surface": "#F6E7E1",
+      "dusty_rose": "#D8A39B",
+      "rose_deep": "#BE7D75",
+      "plum_ink": "#4D3539",
+      "plum_soft": "#7A5C60",
+      "gold_accent": "#C6A15B"
+    },
+    "mapping": {
+      "background": "#FAF3EF",
+      "foreground": "#4D3539",
+      "primary": "#BE7D75",
+      "primary_foreground": "#FAF3EF",
+      "muted": "#F1E5DC",
+      "muted_foreground": "#7A5C60",
+      "accent": "#F6E7E1",
+      "border": "#D8A39B"
+    },
+    "instructions": "Do not use stark black or stark white. Use `background_cream` for the main body and `plum_ink` for primary text. Use `rose_deep` for CTAs. Use `gold_accent` extremely sparingly (e.g., a 1px decorative line or a subtle active state indicator)."
+  },
+  "visual_enhancers": {
+    "borders_and_radius": "Use highly rounded corners: 16px to 26px (`rounded-2xl`, `rounded-3xl`) for cards and images. Use pill-shaped `rounded-full` for all buttons.",
+    "shadows": "Use soft, gentle, dispersed shadows. Avoid harsh drop shadows. e.g. `shadow-[0_8px_30px_rgb(77,53,57,0.08)]`.",
+    "surfaces": "No hard borders on cards. Rely on background color shifts (e.g., Cream to Sand) or very delicate borders using `dusty_rose` at 20% opacity. Use glassmorphism sparingly (`bg-white/40 backdrop-blur-xl`) only for sticky navigation to keep it airy.",
+    "motion": "Implement subtle fade-ins and gentle upward slides on scroll using Framer Motion (`initial={{ opacity: 0, y: 20 }}`). Keep animations slow and elegant (e.g., `duration: 0.8, ease: [0.16, 1, 0.3, 1]`)."
+  },
+  "layouts": {
+    "spacing": "Extremely generous whitespace. Use `py-20` to `py-32` for section padding. Components should have ample breathing room.",
+    "grids": "Use asymmetrical 'bento' or overlapping layouts for the marketing sections. For the skin quiz, use centered, distraction-free singular focal points.",
+    "hero": "A split layout or an immersive image with a glassmorphism card over it. Text must be entirely legible—do not use generic dark overlays. A soft gradient or localized shadow behind text is preferred if it overlaps an image."
+  },
+  "components": {
+    "buttons": "Pill-shaped. Primary: `bg-[#BE7D75] text-[#FAF3EF] hover:bg-[#a66a63] transition-colors`. Secondary: `bg-transparent border border-[#BE7D75] text-[#BE7D75]`.",
+    "cards": "Soft background colors (`#F1E5DC` or `#F6E7E1`), heavily rounded (`rounded-3xl`), no border or ultra-faint border.",
+    "inputs": "Customized Shadcn inputs. Use `rounded-full` or `rounded-2xl`, background `#FAF3EF` or `#ffffff/50`, soft border focus `ring-[#BE7D75]`.",
+    "quiz_cards": "Tappable select cards should have a subtle hover lift (`-translate-y-1`) and active state indicated by `gold_accent` border or `rose_deep` background shift."
+  },
+  "image_urls": [
+    {
+      "url": "https://images.pexels.com/photos/33271832/pexels-photo-33271832.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+      "category": "Hero / Branding",
+      "description": "Glamorous woman with glowing makeup, perfect for the hero section or 'About' page conveying luxury beauty."
+    },
+    {
+      "url": "https://images.pexels.com/photos/20469559/pexels-photo-20469559.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+      "category": "Texture / Background",
+      "description": "Macro shot of smooth white cream texture. Excellent for section backgrounds or decorative accents."
+    },
+    {
+      "url": "https://images.pexels.com/photos/28117004/pexels-photo-28117004.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+      "category": "Services / Quiz",
+      "description": "Skincare smear on skin, perfect to illustrate the 'Skin Quiz' or skincare consultation service."
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1761470575018-135c213340eb?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NTYxNzV8MHwxfHNlYXJjaHwzfHxtaW5pbWFsaXN0JTIwbHV4dXJ5JTIwc3BhJTIwaW50ZXJpb3IlMjB3YXJtfGVufDB8fHx8MTc4MzY5MDQ1NHww&ixlib=rb-4.1.0&q=85",
+      "category": "Atmosphere / Location",
+      "description": "Warm, minimalist luxury spa interior with candle lighting, setting the mood for the in-person consultation."
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1756748955272-aec5485b9ab9?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1Nzd8MHwxfHNlYXJjaHw0fHxtYWtldXAlMjBhcnRpc3QlMjBhcHBsaWNhdGlvbiUyMGx1eHVyeXxlbnwwfHx8fDE3ODM2OTA0NTV8MA&ixlib=rb-4.1.0&q=85",
+      "category": "Services / Packages",
+      "description": "Makeup artist applying makeup. Use for the Guided Shopping or Makeup Consultation service packages."
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1693578538512-fc66f318c833?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NTYxNzV8MHwxfHNlYXJjaHwxfHxtaW5pbWFsaXN0JTIwbHV4dXJ5JTIwc3BhJTIwaW50ZXJpb3IlMjB3YXJtfGVufDB8fHx8MTc4MzY5MDQ1NHww&ixlib=rb-4.1.0&q=85",
+      "category": "Atmosphere / Location",
+      "description": "Luxury minimalist lounge interior. Great for the 'About' or 'Booking' section."
+    }
+  ],
+  "accessibility": {
+    "guidelines": "Ensure minimum 4.5:1 contrast ratio. Specifically, test `plum_ink` against `background_cream` (should pass easily), and `FAF3EF` text on `rose_deep` buttons. Add `data-testid` attributes to all interactive elements (buttons, inputs, language toggler, quiz options)."
+  },
+  "libraries": {
+    "icons": "lucide-react (using lightweight elegant icons like Sparkles, ArrowRight, Check).",
+    "motion": "framer-motion for page transitions, scroll reveals, and the quiz progress bar.",
+    "form": "react-hook-form + zod for the waitlist, quiz, and booking flow.",
+    "date": "react-day-picker for booking dates."
+  },
+  "instructions_to_main_agent": "Do NOT use default Shadcn themes. Completely override colors in tailwind.config.js using the hex codes provided above. Use `dir=\"rtl\"` for Arabic support and ensure all layouts use logical properties (`ps`, `me`, `text-start`). Do not use `transparent` backgrounds for sticky headers or dropdowns—use glassmorphism or solid `#FAF3EF`. Build a `.js` implementation, avoiding TypeScript-specific syntax since the workspace is not configured for it.",
+  "UNIVERSAL_GUIDELINES_FOR_MAIN_AGENT": "Prioritize a 'quiet luxury' aesthetic: immense whitespace, flawless typography, and subtle micro-interactions. Avoid chaotic animations or 'tech startup' gradients. The feeling must be 'champagne and silk'. Always apply data-testid to interactive elements. Do not use AI emojis. Implement toast notifications using Sonner."
+}
